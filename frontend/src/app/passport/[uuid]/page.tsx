@@ -34,6 +34,7 @@ import {
 } from '@mui/icons-material';
 import axios from 'axios';
 import { format } from 'date-fns';
+import ExportPdfButton from '@/components/passport/ExportPdfButton';
 
 async function getPassportData(uuid: string) {
   const baseURL =
@@ -95,12 +96,15 @@ export default async function PassportPage({ params }: { params: { uuid: string 
                 Official Product Passport
               </Typography>
             </Stack>
-            <Chip
-              icon={<VerifiedIcon sx={{ color: '#10b981 !important' }} />}
-              label="Verified Authentic"
-              size="small"
-              sx={{ bgcolor: 'rgba(16, 185, 129, 0.15)', color: '#34d399', fontWeight: 600 }}
-            />
+            <Stack direction="row" spacing={1.5} alignItems="center">
+              <ExportPdfButton />
+              <Chip
+                icon={<VerifiedIcon sx={{ color: '#10b981 !important' }} />}
+                label="Verified Authentic"
+                size="small"
+                sx={{ bgcolor: 'rgba(16, 185, 129, 0.15)', color: '#34d399', fontWeight: 600 }}
+              />
+            </Stack>
           </Box>
         </Container>
       </Box>

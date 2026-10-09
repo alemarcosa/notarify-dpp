@@ -21,6 +21,7 @@ import {
   QrCode2 as QrCodeIcon,
   Launch as LaunchIcon,
   Download as DownloadIcon,
+  Visibility as ViewIcon,
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import { useSnackbar } from 'notistack';
@@ -199,7 +200,7 @@ export default function ProductTable({
     {
       field: 'actions',
       headerName: 'Actions',
-      width: 190,
+      width: 210,
       sortable: false,
       renderCell: (params: GridRenderCellParams<ProductRow>) => {
         const passportUuid = params.row.passport?.passportUuid;
@@ -207,6 +208,16 @@ export default function ProductTable({
 
         return (
           <Box display="flex" alignItems="center" gap={0.5}>
+            <Tooltip title="View / Inspect">
+              <IconButton
+                size="small"
+                color="info"
+                onClick={() => router.push(`/products/${params.row.id}`)}
+              >
+                <ViewIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+
             <Tooltip title="Edit Product">
               <IconButton
                 size="small"
