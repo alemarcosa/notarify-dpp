@@ -1,0 +1,211 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  EDITOR
+}
+
+enum ProductStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum DocumentType {
+  USER_MANUAL
+  WARRANTY
+  TECHNICAL_DATASHEET
+  OTHER
+}
+
+enum PassportStatus {
+  ACTIVE
+  REVOKED
+}
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String
+  firstName    String
+  lastName     String
+  role         Role      @default(EDITOR)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  products     Product[] @relation("UserProducts")
+  auditLogs    AuditLog[]
+
+  @@map("users")
+}
+
+model FileUpload {
+  id           String    @id @default(uuid())
+  originalName String
+  storagePath  String
+  mimeType     String
+  sizeBytes    Int
+  createdAt    DateTime  @default(now())
+
+  products     Product[]
+  documents    Document[]
+  images       ProductImage[]
+  certifications Certification[]
+
+  @@map("file_uploads")
+}
+
+model Product {
+  id              String         @id @default(uuid())
+  name            String
+  sku             String         @unique
+  serialNumber    String?
+  category        String
+  description     String         @db.Text
+  productionDate  DateTime?
+  countryOfOrigin String?
+  status          ProductStatus  @default(DRAFT)
+  version         Int            @default(1)
+  
+  coverImageId    String?
+  coverImage      FileUpload?    @relation(fields: [coverImageId], references: [id])
+  
+  createdById     String
+  createdBy       User           @relation("UserProducts", fields: [createdById], references: [id])
+  
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  deletedAt       DateTime?
+
+  materials       Material[]
+  sustainability  Sustainability?
+  certifications  Certification[]
+  documents       Document[]
+  images          ProductImage[]
+  passport        ProductPassport?
+
+  @@index([sku])
+  // NOTE: A manual migration should be created to add a full-text search tsvector 
+  // index on name, sku, and description for advanced searching capabilities.
+  @@map("products")
+}
+
+model Material {
+  id              String   @id @default(uuid())
+  productId       String
+  product         Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name            String
+  percentage      Decimal
+  countryOfOrigin String?
+  recyclable      Boolean  @default(false)
+  sortOrder       Int      @default(0)
+
+  @@map("materials")
+}
+
+model Sustainability {
+  id                         String   @id @default(uuid())
+  productId                  String   @unique
+  product                    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  carbonFootprint            Decimal? 
+  waterConsumption           Decimal? 
+  recycledMaterialPercentage Decimal? 
+  repairabilityScore         Int?     // 1-10
+  recyclable                 Boolean  @default(false)
+
+  @@map("sustainability")
+}
+
+model Certification {
+  id               String      @id @default(uuid())
+  productId        String
+  product          Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name             String
+  issuingAuthority String
+  issueDate        DateTime
+  expirationDate   DateTime?
+  
+  documentFileId   String?
+  documentFile     FileUpload? @relation(fields: [documentFileId], references: [id])
+
+  @@map("certifications")
+}
+
+model Document {
+  id        String       @id @default(uuid())
+  productId String
+  product   Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  title     String
+  type      DocumentType
+  
+  fileId    String
+  file      FileUpload   @relation(fields: [fileId], references: [id])
+
+  @@map("documents")
+}
+
+model ProductImage {
+  id        String     @id @default(uuid())
+  productId String
+  product   Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sortOrder Int        @default(0)
+  
+  fileId    String
+  file      FileUpload @relation(fields: [fileId], references: [id])
+
+  @@map("product_images")
+}
+
+model ProductPassport {
+  id           String         @id @default(uuid())
+  productId    String         @unique
+  product      Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  passportUuid String         @unique @default(uuid())
+  version      Int            @default(1)
+  qrCodePath   String?
+  status       PassportStatus @default(ACTIVE)
+  publishedAt  DateTime?      @default(now())
+  createdAt    DateTime       @default(now())
+
+  scanEvents   ScanEvent[]
+
+  @@index([passportUuid])
+  @@map("product_passports")
+}
+
+model ScanEvent {
+  id              String          @id @default(uuid())
+  passportId      String
+  passport        ProductPassport @relation(fields: [passportId], references: [id], onDelete: Cascade)
+  scannedAt       DateTime        @default(now())
+  ipAddress       String?
+  browser         String?
+  operatingSystem String?
+  browserLanguage String?
+  country         String?
+
+  @@index([scannedAt])
+  @@map("scan_events")
+}
+
+model AuditLog {
+  id             String   @id @default(uuid())
+  userId         String?
+  user           User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action         String
+  entityType     String
+  entityId       String
+  previousValues Json?
+  newValues      Json?
+  createdAt      DateTime @default(now())
+
+  @@map("audit_logs")
+}
